@@ -17,6 +17,7 @@
   --b1:    #2A3441; --b2: #3A4859;
   --blue:  #2196F3; --blue2: #1565C0;
   --accent:#00E5FF; --green:#00C853; --amber:#FFB300; --red:#F44336;
+  --teal:  #00BCD4; --teal2:#26C6DA; --purple:#7B61FF;
   --t1:    #E8EDF3; --t2:#8899AA; --t3:#556070;
   --mono:  'Barlow Condensed', sans-serif;
   --sans:  'Barlow', sans-serif;
@@ -172,9 +173,9 @@ main{position:relative;z-index:1;max-width:1440px;margin:0 auto;padding:20px 16p
 .sync-actions{display:flex;gap:8px;}
 
 /* ── STATS ── */
-.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:20px;}
-@media(max-width:1000px){.stats{grid-template-columns:repeat(3,1fr);}}
-@media(max-width:500px){.stats{grid-template-columns:repeat(2,1fr);}}
+.stats{display:grid;grid-template-columns:repeat(8,1fr);gap:10px;margin-bottom:20px;}
+@media(max-width:1200px){.stats{grid-template-columns:repeat(4,1fr);}}
+@media(max-width:600px){.stats{grid-template-columns:repeat(2,1fr);}}
 .stat{background:var(--s1);border:1px solid var(--b1);border-radius:10px;padding:14px 16px;position:relative;overflow:hidden;transition:border-color .2s,transform .15s;}
 .stat:hover{border-color:var(--b2);transform:translateY(-1px);}
 .stat::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;}
@@ -183,10 +184,12 @@ main{position:relative;z-index:1;max-width:1440px;margin:0 auto;padding:20px 16p
 .stat.cg::after{background:var(--green);}
 .stat.cr::after{background:var(--red);}
 .stat.co::after{background:var(--amber);}
-.stat.cv::after{background:#7B61FF;}
+.stat.cv::after{background:var(--purple);}
+.stat.ct::after{background:var(--teal);}
+.stat.cp::after{background:var(--teal2);}
 .stat-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--t3);margin-bottom:8px;}
 .stat-num{font-family:var(--mono);font-size:26px;font-weight:800;color:var(--t1);line-height:1;}
-.stat-num.sm{font-size:20px;}
+.stat-num.sm{font-size:18px;}
 .pfx{font-size:12px;color:var(--t2);vertical-align:super;margin-right:1px;}
 .stat-sub{font-size:9px;color:var(--t3);margin-top:4px;}
 
@@ -207,7 +210,7 @@ select option{background:#1C2330;}
 
 /* ── TABLE ── */
 .table-outer{background:var(--s1);border:1px solid var(--b1);border-radius:12px;overflow:auto;-webkit-overflow-scrolling:touch;}
-table{width:100%;border-collapse:collapse;font-size:12px;min-width:900px;}
+table{width:100%;border-collapse:collapse;font-size:12px;min-width:1100px;}
 thead tr{background:var(--s2);}
 th{padding:10px;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);text-align:center;border-right:1px solid var(--b1);white-space:nowrap;}
 th:last-child{border-right:none;}
@@ -233,6 +236,8 @@ tr:hover td{background:rgba(255,255,255,.03)!important;}
 .bs{background:rgba(255,179,0,.12);color:#FFB300;border:1px solid rgba(255,179,0,.3);}
 .bn{background:transparent;color:var(--t3);border:1px solid var(--b1);}
 .bdot{width:5px;height:5px;border-radius:50%;display:inline-block;}
+.tbadge-claimed{font-family:var(--mono);font-size:9px;font-weight:700;color:var(--teal);background:rgba(0,188,212,.12);border:1px solid rgba(0,188,212,.3);border-radius:20px;padding:2px 7px;white-space:nowrap;}
+.tbadge-pending{font-family:var(--mono);font-size:9px;font-weight:700;color:var(--t3);background:transparent;border:1px solid var(--b1);border-radius:20px;padding:2px 7px;}
 
 /* Empty */
 .empty{padding:56px 20px;text-align:center;color:var(--t3);}
@@ -294,12 +299,15 @@ tr:hover td{background:rgba(255,255,255,.03)!important;}
 .f textarea{resize:vertical;min-height:56px;}
 .f select option{background:#1C2330;}
 .fsec{grid-column:1/-1;font-family:var(--mono);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);padding-bottom:5px;border-bottom:1px solid rgba(0,229,255,.18);margin-top:4px;}
+.fsec.ts{color:var(--teal);border-bottom-color:rgba(0,188,212,.2);}
 .fdiv{grid-column:1/-1;border:none;border-top:1px solid var(--b1);}
 .calc-bar{grid-column:1/-1;background:var(--bg);border:1px solid var(--b2);border-radius:9px;padding:14px 16px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
 .cv{text-align:center;}
 .cv-l{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--t3);margin-bottom:4px;}
 .cv-v{font-family:var(--mono);font-size:16px;font-weight:800;color:var(--accent);}
 .cv-v.dim{color:var(--t3);font-size:13px;}
+.trav-info{grid-column:1/-1;background:rgba(0,188,212,.06);border:1px solid rgba(0,188,212,.2);border-radius:8px;padding:12px 14px;font-size:11px;color:var(--t2);line-height:1.6;}
+.trav-info strong{color:var(--teal);}
 
 /* Confirm dialog */
 #confirmOverlay{z-index:500;}
@@ -345,7 +353,7 @@ tr:hover td{background:rgba(255,255,255,.03)!important;}
 </head>
 <body>
 
-<input type="file" id="importInput" accept=".json" onchange="importJSON(event)">
+<input type="file" id="importInput" accept=".json">
 
 <!-- ── AUTH SCREEN ── -->
 <div id="authScreen">
@@ -413,9 +421,11 @@ tr:hover td{background:rgba(255,255,255,.03)!important;}
   <!-- Stats -->
   <div class="stats">
     <div class="stat cb"><div class="stat-lbl">Total Claims</div><div class="stat-num" id="sTot">0</div><div class="stat-sub">all time</div></div>
-    <div class="stat ca"><div class="stat-lbl">Total Claimed</div><div class="stat-num sm"><span class="pfx">£</span><span id="sClaim">0.00</span></div><div class="stat-sub">gross</div></div>
-    <div class="stat cg"><div class="stat-lbl">Total Paid</div><div class="stat-num sm"><span class="pfx">£</span><span id="sPaid">0.00</span></div><div class="stat-sub">received</div></div>
-    <div class="stat cr"><div class="stat-lbl">Outstanding</div><div class="stat-num sm"><span class="pfx">£</span><span id="sOut">0.00</span></div><div class="stat-sub">unpaid</div></div>
+    <div class="stat ca"><div class="stat-lbl">Total Claimed</div><div class="stat-num sm"><span class="pfx">£</span><span id="sClaim">0.00</span></div><div class="stat-sub">shift + travel gross</div></div>
+    <div class="stat cg"><div class="stat-lbl">Shift Paid</div><div class="stat-num sm"><span class="pfx">£</span><span id="sPaid">0.00</span></div><div class="stat-sub">base + unsoc received</div></div>
+    <div class="stat cr"><div class="stat-lbl">Shift Outstanding</div><div class="stat-num sm"><span class="pfx">£</span><span id="sOut">0.00</span></div><div class="stat-sub">needs authorisation</div></div>
+    <div class="stat ct"><div class="stat-lbl">Travel Claimed</div><div class="stat-num sm"><span class="pfx">£</span><span id="sTravClaimed">0.00</span></div><div class="stat-sub">in next pay run</div></div>
+    <div class="stat cp"><div class="stat-lbl">Travel Pending</div><div class="stat-num sm"><span class="pfx">£</span><span id="sTravPending">0.00</span></div><div class="stat-sub">not yet claimed</div></div>
     <div class="stat co"><div class="stat-lbl">Awaiting Ack.</div><div class="stat-num" id="sSent">0</div><div class="stat-sub">sent, unconfirmed</div></div>
     <div class="stat cv"><div class="stat-lbl">Awaiting Pay</div><div class="stat-num" id="sAck">0</div><div class="stat-sub">acknowledged</div></div>
   </div>
@@ -449,8 +459,8 @@ tr:hover td{background:rgba(255,255,255,.03)!important;}
         <tr>
           <th>#</th><th>Date</th><th>Type</th><th>Shift / Info</th>
           <th>Normal h</th><th>Unsoc h</th>
-          <th>Base Pay</th><th>Unsoc Pay</th><th>Travel Pay</th>
-          <th>Total</th><th>Status</th>
+          <th>Base Pay</th><th>Unsoc Pay</th><th>Travel Pay</th><th>Travel Claimed</th>
+          <th>Shift Total</th><th>Status</th>
           <th>Sent</th><th>Acknowledged</th><th>Paid</th>
           <th>Notes</th><th></th>
         </tr>
@@ -502,10 +512,17 @@ tr:hover td{background:rgba(255,255,255,.03)!important;}
           <div class="cv"><div class="cv-l">Normal hrs</div><div class="cv-v dim" id="pvN">—</div></div>
           <div class="cv"><div class="cv-l">Unsoc hrs</div><div class="cv-v dim" id="pvU">—</div></div>
           <div class="cv"><div class="cv-l">Travel pay</div><div class="cv-v dim" id="pvT">—</div></div>
-          <div class="cv"><div class="cv-l">Total</div><div class="cv-v" id="pvTot">—</div></div>
+          <div class="cv"><div class="cv-l">Shift total</div><div class="cv-v" id="pvTot">—</div></div>
         </div>
         <hr class="fdiv">
-        <div class="fsec">Claim Milestones</div>
+        <div class="fsec ts">🚗 Travel Claim</div>
+        <div class="trav-info">
+          Travel pay is processed <strong>separately</strong> from the shift claim and paid automatically in the <strong>next pay run</strong> once submitted — no colleague authorisation needed. Set the date you submitted the travel claim below. Once set, travel pay is <strong>excluded from Shift Outstanding</strong> and shown in its own stat.
+        </div>
+        <div class="f"><label>Travel Claimed Date</label><input type="date" id="fTravClaimed"></div>
+        <div class="f"><label style="opacity:0">.</label><div style="font-size:11px;color:var(--t3);padding:10px 0;line-height:1.5">Leave blank if travel not yet claimed.</div></div>
+        <hr class="fdiv">
+        <div class="fsec">Shift Claim Milestones</div>
         <div class="f"><label>Claim Sent</label><input type="date" id="fSent"></div>
         <div class="f"><label>Claim Acknowledged</label><input type="date" id="fAck"></div>
         <div class="f"><label>Claim Paid</label><input type="date" id="fPaid"></div>
@@ -667,47 +684,49 @@ async function deleteClaimFromDB(id) {
 // Map app camelCase → DB snake_case
 function appToDB(c) {
   return {
-    id:         c.id,
-    user_id:    currentUser.id,
-    date:       c.date,
-    type:       c.type,
-    shift:      c.shift,
-    start_time: c.startTime,
-    extra_hrs:  c.extraHrs,
-    miles:      c.miles,
-    n:          c.n,
-    u:          c.u,
-    base_pay:   c.basePay,
-    unsoc_pay:  c.unsocPay,
-    trav_pay:   c.travPay,
-    total:      c.total,
-    date_sent:  c.dateSent,
-    date_ack:   c.dateAck,
-    date_paid:  c.datePaid,
-    notes:      c.notes,
+    id:                  c.id,
+    user_id:             currentUser.id,
+    date:                c.date,
+    type:                c.type,
+    shift:               c.shift,
+    start_time:          c.startTime,
+    extra_hrs:           c.extraHrs,
+    miles:               c.miles,
+    n:                   c.n,
+    u:                   c.u,
+    base_pay:            c.basePay,
+    unsoc_pay:           c.unsocPay,
+    trav_pay:            c.travPay,
+    total:               c.total,
+    date_sent:           c.dateSent,
+    date_ack:            c.dateAck,
+    date_paid:           c.datePaid,
+    travel_claimed_date: c.travClaimedDate,
+    notes:               c.notes,
   };
 }
 
 // Map DB snake_case → app camelCase
 function dbToApp(r) {
   return {
-    id:        r.id,
-    date:      r.date,
-    type:      r.type,
-    shift:     r.shift,
-    startTime: r.start_time,
-    extraHrs:  r.extra_hrs,
-    miles:     r.miles,
-    n:         r.n,
-    u:         r.u,
-    basePay:   r.base_pay,
-    unsocPay:  r.unsoc_pay,
-    travPay:   r.trav_pay,
-    total:     r.total,
-    dateSent:  r.date_sent,
-    dateAck:   r.date_ack,
-    datePaid:  r.date_paid,
-    notes:     r.notes,
+    id:              r.id,
+    date:            r.date,
+    type:            r.type,
+    shift:           r.shift,
+    startTime:       r.start_time,
+    extraHrs:        r.extra_hrs,
+    miles:           r.miles,
+    n:               r.n,
+    u:               r.u,
+    basePay:         r.base_pay,
+    unsocPay:        r.unsoc_pay,
+    travPay:         r.trav_pay,
+    total:           r.total,
+    dateSent:        r.date_sent,
+    dateAck:         r.date_ack,
+    datePaid:        r.date_paid,
+    travClaimedDate: r.travel_claimed_date,
+    notes:           r.notes,
   };
 }
 
@@ -730,11 +749,12 @@ function calc(type, shift, startTime, extraHrs, miles) {
   } else if (SHIFTS[shift]) {
     n = SHIFTS[shift].n; u = SHIFTS[shift].u;
   }
-  const rate    = type==='Public Holiday' ? R.pubHol : R.planned;
-  const basePay = (n+u)*rate;
-  const unsocPay= u*R.unsoc;
-  const travPay = (parseFloat(miles)||0)*2*R.mile;
-  return { n, u, basePay, unsocPay, travPay, total:basePay+unsocPay+travPay };
+  const rate       = type==='Public Holiday' ? R.pubHol : R.planned;
+  const basePay    = (n+u)*rate;
+  const unsocPay   = u*R.unsoc;
+  const travPay    = (parseFloat(miles)||0)*2*R.mile;
+  const shiftTotal = basePay+unsocPay;
+  return { n, u, basePay, unsocPay, travPay, shiftTotal, total:shiftTotal+travPay };
 }
 
 // ── STATUS ─────────────────────────────────────────────────────────────────
@@ -753,15 +773,23 @@ const BADGES = {
 };
 
 // ── STATS ──────────────────────────────────────────────────────────────────
+// KEY RULE: Outstanding = unpaid shift pay (base+unsoc) only. Travel is tracked separately.
 function updateStats() {
-  const claimed = claims.reduce((s,c)=>s+(c.total||0),0);
-  const paid    = claims.filter(c=>c.datePaid).reduce((s,c)=>s+(c.total||0),0);
-  document.getElementById('sTot').textContent   = claims.length;
-  document.getElementById('sClaim').textContent = claimed.toFixed(2);
-  document.getElementById('sPaid').textContent  = paid.toFixed(2);
-  document.getElementById('sOut').textContent   = (claimed-paid).toFixed(2);
-  document.getElementById('sSent').textContent  = claims.filter(c=>c.dateSent&&!c.dateAck).length;
-  document.getElementById('sAck').textContent   = claims.filter(c=>c.dateAck&&!c.datePaid).length;
+  const shiftPay = c => (c.basePay||0) + (c.unsocPay||0);
+  const totalClaimed    = claims.reduce((s,c)=>s+(c.total||0), 0);
+  const shiftPaid       = claims.filter(c=>c.datePaid).reduce((s,c)=>s+shiftPay(c), 0);
+  const shiftOutstanding= claims.filter(c=>!c.datePaid).reduce((s,c)=>s+shiftPay(c), 0);
+  const travClaimed     = claims.filter(c=>c.travClaimedDate&&(c.travPay||0)>0).reduce((s,c)=>s+(c.travPay||0), 0);
+  const travPending     = claims.filter(c=>!c.travClaimedDate&&(c.travPay||0)>0).reduce((s,c)=>s+(c.travPay||0), 0);
+
+  document.getElementById('sTot').textContent          = claims.length;
+  document.getElementById('sClaim').textContent        = totalClaimed.toFixed(2);
+  document.getElementById('sPaid').textContent         = shiftPaid.toFixed(2);
+  document.getElementById('sOut').textContent          = shiftOutstanding.toFixed(2);
+  document.getElementById('sTravClaimed').textContent  = travClaimed.toFixed(2);
+  document.getElementById('sTravPending').textContent  = travPending.toFixed(2);
+  document.getElementById('sSent').textContent         = claims.filter(c=>c.dateSent&&!c.dateAck).length;
+  document.getElementById('sAck').textContent          = claims.filter(c=>c.dateAck&&!c.datePaid).length;
 }
 
 // ── RENDER ─────────────────────────────────────────────────────────────────
@@ -792,6 +820,12 @@ function render() {
     const shiftInfo = c.type==='Unplanned'
       ? `+${c.extraHrs||0}h @ ${c.startTime||'?'}`
       : (c.shift||'<span class="cdash">—</span>');
+    let travCell;
+    if (!(c.travPay > 0)) { travCell = '<span class="cdash">—</span>'; }
+    else if (c.travClaimedDate) { travCell = `<span class="tbadge-claimed">✓ ${fd(c.travClaimedDate)}</span>`; }
+    else { travCell = '<span class="tbadge-pending">Unclaimed</span>'; }
+
+    const shiftTotal = (c.basePay||0) + (c.unsocPay||0);
     return `<tr class="${rc}">
       <td class="cid">${String(i+1).padStart(3,'0')}</td>
       <td class="cdate">${fd(c.date)}</td>
@@ -802,7 +836,8 @@ function render() {
       <td class="cmoney">${fm(c.basePay)}</td>
       <td class="cmoney">${fm(c.unsocPay)}</td>
       <td class="cmoney">${fm(c.travPay)}</td>
-      <td class="ctotal">£${(c.total||0).toFixed(2)}</td>
+      <td>${travCell}</td>
+      <td class="ctotal">£${shiftTotal.toFixed(2)}</td>
       <td>${BADGES[st]}</td>
       <td class="cdate">${fd(c.dateSent)}</td>
       <td class="cdate">${fd(c.dateAck)}</td>
@@ -823,7 +858,7 @@ function openModal(id=null) {
   document.getElementById('saveBtn').textContent = 'Save Claim';
   document.getElementById('saveBtn').disabled = false;
 
-  ['fDate','fSent','fAck','fPaid','fNotes','fStart','fExtra','fMiles']
+  ['fDate','fSent','fAck','fPaid','fNotes','fStart','fExtra','fMiles','fTravClaimed']
     .forEach(f => document.getElementById(f).value='');
   document.getElementById('fType').value  = '';
   document.getElementById('fShift').value = '';
@@ -837,10 +872,11 @@ function openModal(id=null) {
       document.getElementById('fStart').value = c.startTime||'';
       document.getElementById('fExtra').value = c.extraHrs||'';
       document.getElementById('fMiles').value = c.miles||'';
-      document.getElementById('fSent').value  = c.dateSent||'';
-      document.getElementById('fAck').value   = c.dateAck||'';
-      document.getElementById('fPaid').value  = c.datePaid||'';
-      document.getElementById('fNotes').value = c.notes||'';
+      document.getElementById('fSent').value         = c.dateSent||'';
+      document.getElementById('fAck').value          = c.dateAck||'';
+      document.getElementById('fPaid').value         = c.datePaid||'';
+      document.getElementById('fTravClaimed').value  = c.travClaimedDate||'';
+      document.getElementById('fNotes').value        = c.notes||'';
     }
   }
   typeChanged();
@@ -884,7 +920,7 @@ function recalc() {
   document.getElementById('pvN').textContent   = r.n.toFixed(2)+'h';
   document.getElementById('pvU').textContent   = r.u>0?r.u.toFixed(2)+'h':'—';
   document.getElementById('pvT').textContent   = r.travPay>0?'£'+r.travPay.toFixed(2):'—';
-  document.getElementById('pvTot').textContent = '£'+r.total.toFixed(2);
+  document.getElementById('pvTot').textContent = '£'+r.shiftTotal.toFixed(2);
   ['pvN','pvTot'].forEach(id=>document.getElementById(id).className='cv-v');
 }
 
@@ -908,10 +944,11 @@ async function saveClaim() {
     date, type, shift, startTime, extraHrs, miles,
     n:r.n, u:r.u,
     basePay:r.basePay, unsocPay:r.unsocPay, travPay:r.travPay, total:r.total,
-    dateSent: document.getElementById('fSent').value,
-    dateAck:  document.getElementById('fAck').value,
-    datePaid: document.getElementById('fPaid').value,
-    notes:    document.getElementById('fNotes').value,
+    dateSent:        document.getElementById('fSent').value,
+    dateAck:         document.getElementById('fAck').value,
+    datePaid:        document.getElementById('fPaid').value,
+    travClaimedDate: document.getElementById('fTravClaimed').value,
+    notes:           document.getElementById('fNotes').value,
   };
 
   try {
@@ -983,12 +1020,14 @@ async function confirmDelete() {
 // ── EXPORT CSV ─────────────────────────────────────────────────────────────
 function exportCSV() {
   if (!claims.length) { toast('No claims to export','err'); return; }
-  const H = ['#','Date','Type','Shift','Normal h','Unsoc h','Base Pay','Unsoc Pay','Travel Pay','Total','Status','Sent','Acknowledged','Paid','Notes'];
+  const H = ['#','Date','Type','Shift','Normal h','Unsoc h','Base Pay','Unsoc Pay','Travel Pay','Travel Claimed Date','Shift Total','Status','Sent','Acknowledged','Paid','Notes'];
   const rows = claims.map((c,i)=>[
     i+1,c.date,c.type,
     c.type==='Unplanned'?`+${c.extraHrs}h @ ${c.startTime}`:c.shift,
     (c.n||0).toFixed(2),(c.u||0).toFixed(2),
-    (c.basePay||0).toFixed(2),(c.unsocPay||0).toFixed(2),(c.travPay||0).toFixed(2),(c.total||0).toFixed(2),
+    (c.basePay||0).toFixed(2),(c.unsocPay||0).toFixed(2),(c.travPay||0).toFixed(2),
+    c.travClaimedDate||'',
+    ((c.basePay||0)+(c.unsocPay||0)).toFixed(2),
     status(c),c.dateSent||'',c.dateAck||'',c.datePaid||'',c.notes||''
   ]);
   const csv=[H,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
