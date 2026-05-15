@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>OT Claims Tracker</title>
+<meta name="theme-color" content="#0D1117">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="OT Claims">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@300;400;500;600&display=swap');
+
+:root {
+  --bg:    #0D1117; --s1: #161B22; --s2: #1C2330;
+  --b1:    #2A3441; --b2: #3A4859;
+  --blue:  #2196F3; --blue2: #1565C0;
+  --accent:#00E5FF; --green:#00C853; --amber:#FFB300; --red:#F44336;
+  --t1:    #E8EDF3; --t2:#8899AA; --t3:#556070;
+  --mono:  'Barlow Condensed', sans-serif;
+  --sans:  'Barlow', sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:var(--sans);background:var(--bg);color:var(--t1);
+  min-height:100vh;min-height:-webkit-fill-available;
+  overflow-x:hidden;
+  padding-top:env(safe-area-inset-top);
+  padding-bottom:env(safe-area-inset-bottom);
+  -webkit-tap-highlight-color:transparent;
+  -webkit-text-size-adjust:100%;
+}
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;
+  background-image:
+    linear-gradient(rgba(33,150,243,.035) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(33,150,243,.035) 1px,transparent 1px);
+  background-size:40px 40px;pointer-events:none;
+}
+
+/* ── AUTH SCREEN ── */
+#authScreen{
+  position:fixed;inset:0;z-index:1000;
+  background:var(--bg);
+  display:flex;align-items:center;justify-content:center;
+  padding:24px;
+}
+.auth-box{
+  width:100%;max-width:380px;
+  background:var(--s1);border:1px solid var(--b2);
+  border-radius:16px;overflow:hidden;
+  box-shadow:0 20px 60px rgba(0,0,0,.6);
+}
+.auth-head{
+  background:var(--s2);border-bottom:1px solid var(--b1);
+  padding:24px 24px 20px;text-align:center;
+}
+.auth-logo-icon{
+  width:48px;height:48px;margin:0 auto 12px;
+  background:linear-gradient(135deg,var(--blue),var(--accent));
+  border-radius:12px;display:flex;align-items:center;justify-content:center;
+  font-size:22px;
+}
+.auth-title{
+  font-family:var(--mono);font-size:20px;font-weight:800;
+  letter-spacing:.1em;text-transform:uppercase;
+}
+.auth-title span{color:var(--accent);}
+.auth-sub{font-size:12px;color:var(--t3);margin-top:4px;}
+.auth-body{padding:24px;}
+.auth-f{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
+.auth-f label{
+  font-size:9px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.08em;color:var(--t3);
+}
+.auth-f input{
+  font-family:var(--sans);font-size:15px;
+  background:var(--s2);color:var(--t1);
+  border:1px solid var(--b1);border-radius:8px;
+  padding:12px 14px;outline:none;
+  -webkit-appearance:none;
+  transition:border-color .15s;
+}
+.auth-f input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(33,150,243,.12);}
+.auth-err{
+  font-size:11px;color:var(--red);
+  background:rgba(244,67,54,.08);border:1px solid rgba(244,67,54,.2);
+  border-radius:6px;padding:8px 12px;margin-bottom:12px;
+  display:none;
+}
+.auth-foot{font-size:11px;color:var(--t3);text-align:center;margin-top:14px;}
+
+/* ── HEADER ── */
+header{
+  position:sticky;top:0;z-index:100;
+  background:rgba(13,17,23,.94);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--b1);
+  padding:0 20px;height:56px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo-icon{
+  width:30px;height:30px;
+  background:linear-gradient(135deg,var(--blue),var(--accent));
+  border-radius:7px;display:flex;align-items:center;justify-content:center;
+  font-size:15px;flex-shrink:0;
+}
+.logo-text{font-family:var(--mono);font-size:16px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;}
+.logo-text span{color:var(--accent);}
+.header-actions{display:flex;gap:8px;align-items:center;}
+.user-pill{
+  font-family:var(--mono);font-size:10px;font-weight:700;
+  color:var(--t3);letter-spacing:.05em;
+  background:var(--s2);border:1px solid var(--b1);
+  border-radius:20px;padding:4px 10px;
+  max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+
+/* ── BUTTONS ── */
+.btn{
+  font-family:var(--mono);font-weight:700;
+  letter-spacing:.07em;text-transform:uppercase;
+  border:none;border-radius:7px;cursor:pointer;
+  transition:opacity .15s,transform .1s;
+  white-space:nowrap;display:inline-flex;align-items:center;gap:5px;
+  -webkit-appearance:none;
+}
+.btn:active{transform:scale(.95);opacity:.85;}
+.btn-primary{background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;font-size:13px;padding:9px 18px;box-shadow:0 2px 14px rgba(33,150,243,.3);}
+.btn-ghost{background:var(--s2);color:var(--t2);border:1px solid var(--b1);font-size:11px;padding:7px 12px;}
+.btn-ghost:hover{color:var(--t1);border-color:var(--b2);}
+.btn-green{background:linear-gradient(135deg,#00C853,#008f3a);color:#fff;font-size:13px;padding:9px 18px;box-shadow:0 2px 14px rgba(0,200,83,.25);}
+.btn-danger{background:rgba(244,67,54,.12);color:var(--red);border:1px solid rgba(244,67,54,.25);font-size:11px;padding:7px 12px;}
+.btn-danger:hover{background:rgba(244,67,54,.22);}
+.btn-amber{background:rgba(255,179,0,.12);color:var(--amber);border:1px solid rgba(255,179,0,.25);font-size:11px;padding:7px 12px;}
+.btn-full{width:100%;justify-content:center;padding:13px 18px;font-size:13px;}
+
+/* ── MAIN ── */
+main{position:relative;z-index:1;max-width:1440px;margin:0 auto;padding:20px 16px 80px;}
+
+/* ── iOS BANNER ── */
+#installBanner{
+  background:linear-gradient(135deg,rgba(33,150,243,.12),rgba(0,229,255,.08));
+  border:1px solid rgba(0,229,255,.3);border-radius:10px;
+  padding:14px 18px;margin-bottom:16px;display:none;
+}
+#installBanner .ib-title{
+  font-family:var(--mono);font-size:11px;font-weight:800;
+  letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:6px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+#installBanner .ib-steps{font-size:12px;color:var(--t2);line-height:1.7;}
+#installBanner .ib-steps strong{color:var(--t1);}
+#installBanner .ib-dismiss{background:none;border:none;color:var(--t3);font-size:18px;cursor:pointer;padding:0 4px;-webkit-appearance:none;}
+
+/* ── SYNC STATUS ── */
+.sync-bar{
+  background:var(--s1);border:1px solid var(--b1);
+  border-radius:10px;padding:10px 16px;margin-bottom:16px;
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+}
+.sync-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.sync-dot.ok{background:var(--green);}
+.sync-dot.loading{background:var(--amber);animation:pulse 1s infinite;}
+.sync-dot.err{background:var(--red);}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+.sync-txt{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);flex:1;}
+.sync-actions{display:flex;gap:8px;}
+
+/* ── STATS ── */
+.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:20px;}
+@media(max-width:1000px){.stats{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:500px){.stats{grid-template-columns:repeat(2,1fr);}}
+.stat{background:var(--s1);border:1px solid var(--b1);border-radius:10px;padding:14px 16px;position:relative;overflow:hidden;transition:border-color .2s,transform .15s;}
+.stat:hover{border-color:var(--b2);transform:translateY(-1px);}
+.stat::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;}
+.stat.ca::after{background:var(--accent);}
+.stat.cb::after{background:var(--blue);}
+.stat.cg::after{background:var(--green);}
+.stat.cr::after{background:var(--red);}
+.stat.co::after{background:var(--amber);}
+.stat.cv::after{background:#7B61FF;}
+.stat-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--t3);margin-bottom:8px;}
+.stat-num{font-family:var(--mono);font-size:26px;font-weight:800;color:var(--t1);line-height:1;}
+.stat-num.sm{font-size:20px;}
+.pfx{font-size:12px;color:var(--t2);vertical-align:super;margin-right:1px;}
+.stat-sub{font-size:9px;color:var(--t3);margin-top:4px;}
+
+/* ── TOOLBAR ── */
+.toolbar{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+.tsep{width:1px;height:26px;background:var(--b1);margin:0 2px;}
+.flabel{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);}
+select,input[type=text]{
+  font-family:var(--sans);font-size:12px;
+  background:var(--s2);color:var(--t1);
+  border:1px solid var(--b1);border-radius:6px;
+  padding:6px 10px;outline:none;
+  -webkit-appearance:none;appearance:none;transition:border-color .15s;
+}
+select{padding-right:24px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23556070'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;}
+select:focus,input[type=text]:focus{border-color:var(--blue);}
+select option{background:#1C2330;}
+
+/* ── TABLE ── */
+.table-outer{background:var(--s1);border:1px solid var(--b1);border-radius:12px;overflow:auto;-webkit-overflow-scrolling:touch;}
+table{width:100%;border-collapse:collapse;font-size:12px;min-width:900px;}
+thead tr{background:var(--s2);}
+th{padding:10px;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);text-align:center;border-right:1px solid var(--b1);white-space:nowrap;}
+th:last-child{border-right:none;}
+td{padding:10px;border-bottom:1px solid var(--b1);border-right:1px solid rgba(42,52,65,.4);text-align:center;vertical-align:middle;}
+td:last-child{border-right:none;}
+tr:last-child td{border-bottom:none;}
+tr.rp td{background:rgba(0,200,83,.05);}
+tr.ra td{background:rgba(33,150,243,.05);}
+tr.rs td{background:rgba(255,179,0,.04);}
+tr:hover td{background:rgba(255,255,255,.03)!important;}
+.cid{font-family:var(--mono);font-weight:800;font-size:13px;color:var(--accent);}
+.cmono{font-family:var(--mono);font-size:12px;color:var(--t2);}
+.cmoney{font-family:var(--mono);font-weight:600;color:var(--t1);}
+.ctotal{font-family:var(--mono);font-weight:800;font-size:13px;color:var(--accent);}
+.cdate{font-family:var(--mono);font-size:11px;color:var(--t2);}
+.cdash{color:var(--t3);}
+.cnotes{font-size:11px;color:var(--t2);text-align:left;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* Badges */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:20px;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;}
+.bp{background:rgba(0,200,83,.14);color:#00C853;border:1px solid rgba(0,200,83,.3);}
+.ba{background:rgba(33,150,243,.14);color:#2196F3;border:1px solid rgba(33,150,243,.3);}
+.bs{background:rgba(255,179,0,.12);color:#FFB300;border:1px solid rgba(255,179,0,.3);}
+.bn{background:transparent;color:var(--t3);border:1px solid var(--b1);}
+.bdot{width:5px;height:5px;border-radius:50%;display:inline-block;}
+
+/* Empty */
+.empty{padding:56px 20px;text-align:center;color:var(--t3);}
+.empty-icon{font-size:32px;margin-bottom:10px;opacity:.4;}
+.empty p{font-size:13px;}
+
+/* ── MODAL ── */
+.overlay{
+  position:fixed;inset:0;z-index:300;
+  background:rgba(0,0,0,.72);
+  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+  display:none;align-items:flex-end;justify-content:center;padding:0;
+}
+@media(min-width:600px){.overlay{align-items:center;padding:20px;}}
+.overlay.open{display:flex;}
+.modal{
+  background:var(--s1);border:1px solid var(--b2);
+  width:100%;max-width:660px;max-height:92vh;overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  box-shadow:0 -8px 40px rgba(0,0,0,.6);
+  animation:slideUp .22s ease-out;border-radius:16px 16px 0 0;
+}
+@media(min-width:600px){.modal{border-radius:14px;animation:fadeIn .2s ease-out;}}
+@keyframes slideUp{from{transform:translateY(40px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+@keyframes fadeIn{from{opacity:0;transform:scale(.97) translateY(10px);}to{opacity:1;transform:scale(1) translateY(0);}}
+.modal-head{
+  background:var(--s2);border-bottom:1px solid var(--b1);
+  padding:16px 20px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:10;border-radius:16px 16px 0 0;
+}
+@media(min-width:600px){.modal-head{border-radius:14px 14px 0 0;}}
+.modal-head h2{font-family:var(--mono);font-size:14px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--t1);}
+.modal-x{background:none;border:none;color:var(--t3);font-size:20px;cursor:pointer;padding:2px 8px;border-radius:4px;transition:color .15s;-webkit-appearance:none;}
+.modal-x:hover{color:var(--t1);}
+.modal-body{padding:20px;}
+.modal-foot{
+  padding:12px 20px;display:flex;align-items:center;gap:8px;
+  border-top:1px solid var(--b1);
+  padding-bottom:calc(20px + env(safe-area-inset-bottom));
+}
+.modal-foot .sp{flex:1;}
+
+/* Form */
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media(max-width:480px){.fg{grid-template-columns:1fr;}}
+.f{display:flex;flex-direction:column;gap:4px;}
+.f.full{grid-column:1/-1;}
+.f label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);}
+.f input,.f select,.f textarea{
+  font-family:var(--sans);font-size:14px;
+  background:var(--s2);color:var(--t1);
+  border:1px solid var(--b1);border-radius:7px;
+  padding:10px 12px;outline:none;
+  -webkit-appearance:none;appearance:none;transition:border-color .15s;
+}
+.f input:focus,.f select:focus,.f textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(33,150,243,.1);}
+.f select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23556070'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;}
+.f textarea{resize:vertical;min-height:56px;}
+.f select option{background:#1C2330;}
+.fsec{grid-column:1/-1;font-family:var(--mono);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);padding-bottom:5px;border-bottom:1px solid rgba(0,229,255,.18);margin-top:4px;}
+.fdiv{grid-column:1/-1;border:none;border-top:1px solid var(--b1);}
+.calc-bar{grid-column:1/-1;background:var(--bg);border:1px solid var(--b2);border-radius:9px;padding:14px 16px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.cv{text-align:center;}
+.cv-l{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--t3);margin-bottom:4px;}
+.cv-v{font-family:var(--mono);font-size:16px;font-weight:800;color:var(--accent);}
+.cv-v.dim{color:var(--t3);font-size:13px;}
+
+/* Confirm dialog */
+#confirmOverlay{z-index:500;}
+.confirm-modal{
+  background:var(--s1);border:1px solid var(--b2);
+  border-radius:16px 16px 0 0;width:100%;max-width:420px;
+  box-shadow:0 -8px 40px rgba(0,0,0,.7);
+  animation:slideUp .2s ease-out;
+  padding:24px 20px calc(24px + env(safe-area-inset-bottom));
+}
+@media(min-width:600px){.confirm-modal{border-radius:14px;animation:fadeIn .2s ease-out;padding-bottom:24px;}}
+.confirm-icon{font-size:28px;text-align:center;margin-bottom:10px;}
+.confirm-title{font-family:var(--mono);font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--t1);text-align:center;margin-bottom:8px;}
+.confirm-msg{font-size:13px;color:var(--t2);text-align:center;line-height:1.5;margin-bottom:20px;}
+.confirm-btns{display:flex;flex-direction:column;gap:8px;}
+
+/* Export modal */
+#exportOverlay{z-index:400;}
+.export-modal{background:var(--s1);border:1px solid var(--b2);border-radius:16px 16px 0 0;width:100%;max-width:560px;box-shadow:0 -8px 40px rgba(0,0,0,.7);animation:slideUp .2s ease-out;}
+@media(min-width:600px){.export-modal{border-radius:14px;animation:fadeIn .2s ease-out;}}
+.export-ta{width:100%;background:var(--bg);color:var(--t2);border:1px solid var(--b1);border-radius:7px;padding:10px 12px;font-family:var(--mono);font-size:11px;resize:none;height:160px;outline:none;-webkit-appearance:none;}
+.export-hint{font-size:11px;color:var(--t3);line-height:1.5;margin-top:10px;}
+.export-hint strong{color:var(--t2);}
+
+/* Toast */
+.toast{
+  position:fixed;left:50%;transform:translateX(-50%) translateY(80px);
+  z-index:999;background:var(--s2);border:1px solid var(--b2);
+  border-radius:24px;padding:11px 20px;
+  font-family:var(--mono);font-size:11px;font-weight:700;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--t1);
+  box-shadow:0 8px 30px rgba(0,0,0,.5);
+  opacity:0;transition:transform .25s ease,opacity .25s ease;
+  pointer-events:none;white-space:nowrap;
+  bottom:calc(24px + env(safe-area-inset-bottom));
+}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+.toast.ok{border-color:rgba(0,200,83,.4);}
+.toast.err{border-color:rgba(244,67,54,.4);}
+
+#importInput{display:none;}
+</style>
+</head>
+<body>
+
+<input type="file" id="importInput" accept=".json" onchange="importJSON(event)">
+
+<!-- ── AUTH SCREEN ── -->
+<div id="authScreen">
+  <div class="auth-box">
+    <div class="auth-head">
+      <div class="auth-logo-icon">⏱</div>
+      <div class="auth-title">OT <span>Claims</span></div>
+      <div class="auth-sub">Sign in to access your tracker</div>
+    </div>
+    <div class="auth-body">
+      <div class="auth-err" id="authErr"></div>
+      <div class="auth-f">
+        <label>Email</label>
+        <input type="email" id="authEmail" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div class="auth-f">
+        <label>Password</label>
+        <input type="password" id="authPassword" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button class="btn btn-green btn-full" onclick="signIn()" id="signInBtn">Sign In</button>
+      <div class="auth-foot">Access is by invitation only.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── APP ── -->
+<div id="appScreen" style="display:none">
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">⏱</div>
+    <div class="logo-text">OT <span>Claims</span></div>
+  </div>
+  <div class="header-actions">
+    <span class="user-pill" id="userPill">—</span>
+    <button class="btn btn-ghost" onclick="signOut()">Sign Out</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- iOS install banner -->
+  <div id="installBanner">
+    <div class="ib-title">
+      <span>📲 Save to Home Screen for best experience</span>
+      <button class="ib-dismiss" onclick="dismissInstall()">✕</button>
+    </div>
+    <div class="ib-steps">
+      1. Tap the <strong>Share</strong> button (□↑) at the bottom of Safari<br>
+      2. Scroll down and tap <strong>"Add to Home Screen"</strong><br>
+      3. Tap <strong>Add</strong> — your data is saved to the cloud automatically
+    </div>
+  </div>
+
+  <!-- Sync status bar -->
+  <div class="sync-bar">
+    <div class="sync-dot ok" id="syncDot"></div>
+    <div class="sync-txt" id="syncTxt">Connected — data synced to cloud</div>
+    <div class="sync-actions">
+      <button class="btn btn-ghost" style="font-size:10px;padding:5px 10px" onclick="loadClaims()">↻ Refresh</button>
+      <button class="btn btn-ghost" style="font-size:10px;padding:5px 10px" onclick="exportCSV()">CSV</button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat cb"><div class="stat-lbl">Total Claims</div><div class="stat-num" id="sTot">0</div><div class="stat-sub">all time</div></div>
+    <div class="stat ca"><div class="stat-lbl">Total Claimed</div><div class="stat-num sm"><span class="pfx">£</span><span id="sClaim">0.00</span></div><div class="stat-sub">gross</div></div>
+    <div class="stat cg"><div class="stat-lbl">Total Paid</div><div class="stat-num sm"><span class="pfx">£</span><span id="sPaid">0.00</span></div><div class="stat-sub">received</div></div>
+    <div class="stat cr"><div class="stat-lbl">Outstanding</div><div class="stat-num sm"><span class="pfx">£</span><span id="sOut">0.00</span></div><div class="stat-sub">unpaid</div></div>
+    <div class="stat co"><div class="stat-lbl">Awaiting Ack.</div><div class="stat-num" id="sSent">0</div><div class="stat-sub">sent, unconfirmed</div></div>
+    <div class="stat cv"><div class="stat-lbl">Awaiting Pay</div><div class="stat-num" id="sAck">0</div><div class="stat-sub">acknowledged</div></div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <button class="btn btn-primary" onclick="openModal()">+ New Claim</button>
+    <div class="tsep"></div>
+    <span class="flabel">Status</span>
+    <select id="fSt" onchange="render()">
+      <option value="">All</option>
+      <option value="pending">Pending</option>
+      <option value="sent">Sent</option>
+      <option value="acknowledged">Acknowledged</option>
+      <option value="paid">Paid</option>
+    </select>
+    <span class="flabel">Type</span>
+    <select id="fTy" onchange="render()">
+      <option value="">All Types</option>
+      <option>Planned</option>
+      <option>Unplanned</option>
+      <option>Public Holiday</option>
+    </select>
+    <input type="text" id="fQ" placeholder="Search…" oninput="render()" style="width:120px">
+  </div>
+
+  <!-- Table -->
+  <div class="table-outer">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th><th>Date</th><th>Type</th><th>Shift / Info</th>
+          <th>Normal h</th><th>Unsoc h</th>
+          <th>Base Pay</th><th>Unsoc Pay</th><th>Travel Pay</th>
+          <th>Total</th><th>Status</th>
+          <th>Sent</th><th>Acknowledged</th><th>Paid</th>
+          <th>Notes</th><th></th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div id="empty" class="empty" style="display:none">
+      <div class="empty-icon">📋</div>
+      <p>No claims yet — tap <strong>+ New Claim</strong> to get started.</p>
+    </div>
+  </div>
+
+</main>
+</div><!-- /appScreen -->
+
+<!-- ── CLAIM MODAL ── -->
+<div class="overlay" id="overlay" onclick="outsideClose(event)">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="mTitle">New Claim</h2>
+      <button class="modal-x" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="fg">
+        <div class="fsec">Shift Details</div>
+        <div class="f"><label>Date Worked *</label><input type="date" id="fDate"></div>
+        <div class="f">
+          <label>OT Type *</label>
+          <select id="fType" onchange="typeChanged()">
+            <option value="">— Select —</option>
+            <option>Planned</option><option>Unplanned</option><option>Public Holiday</option>
+          </select>
+        </div>
+        <div class="f" id="gShift">
+          <label>Shift Pattern</label>
+          <select id="fShift" onchange="recalc()">
+            <option value="">— Select shift —</option>
+            <option value="Day">Day  07:00 – 19:00</option>
+            <option value="Night">Night  19:00 – 07:00</option>
+            <option value="Twilight">Twilight  13:00 – 01:00</option>
+          </select>
+        </div>
+        <div class="f" id="gShiftSpacer"></div>
+        <div class="f" id="gStart" style="display:none"><label>OT Start Time</label><input type="time" id="fStart" oninput="recalc()"></div>
+        <div class="f" id="gExtra" style="display:none"><label>Extra Hours Worked</label><input type="number" id="fExtra" step="0.25" min="0" placeholder="e.g. 2.5" oninput="recalc()"></div>
+        <div class="f"><label>Travel — One-Way Miles</label><input type="number" id="fMiles" step="0.1" min="0" placeholder="Leave blank if none" oninput="recalc()"></div>
+        <div class="f"><label style="opacity:0">.</label><div style="font-size:11px;color:var(--t3);padding:10px 0;line-height:1.4">Return journey included automatically<br>@ £0.45/mile</div></div>
+        <div class="calc-bar">
+          <div class="cv"><div class="cv-l">Normal hrs</div><div class="cv-v dim" id="pvN">—</div></div>
+          <div class="cv"><div class="cv-l">Unsoc hrs</div><div class="cv-v dim" id="pvU">—</div></div>
+          <div class="cv"><div class="cv-l">Travel pay</div><div class="cv-v dim" id="pvT">—</div></div>
+          <div class="cv"><div class="cv-l">Total</div><div class="cv-v" id="pvTot">—</div></div>
+        </div>
+        <hr class="fdiv">
+        <div class="fsec">Claim Milestones</div>
+        <div class="f"><label>Claim Sent</label><input type="date" id="fSent"></div>
+        <div class="f"><label>Claim Acknowledged</label><input type="date" id="fAck"></div>
+        <div class="f"><label>Claim Paid</label><input type="date" id="fPaid"></div>
+        <div class="f"></div>
+        <div class="f full"><label>Notes</label><textarea id="fNotes" placeholder="Any additional details…"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-danger" id="btnDel" onclick="confirmDelete()" style="display:none">Delete</button>
+      <div class="sp"></div>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-green" id="saveBtn" onclick="saveClaim()">Save Claim</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── CONFIRM DIALOG ── -->
+<div class="overlay" id="confirmOverlay">
+  <div class="confirm-modal">
+    <div class="confirm-icon" id="confirmIcon">⚠️</div>
+    <div class="confirm-title" id="confirmTitle">Are you sure?</div>
+    <div class="confirm-msg" id="confirmMsg"></div>
+    <div class="confirm-btns" id="confirmBtns"></div>
+  </div>
+</div>
+
+<!-- ── EXPORT MODAL ── -->
+<div class="overlay" id="exportOverlay" onclick="outsideCloseExport(event)">
+  <div class="export-modal">
+    <div class="modal-head" style="border-radius:16px 16px 0 0">
+      <h2 id="exportTitle">Export Data</h2>
+      <button class="modal-x" onclick="closeExport()">✕</button>
+    </div>
+    <div class="modal-body">
+      <textarea class="export-ta" id="exportTA" readonly onclick="this.select()"></textarea>
+      <div class="export-hint" id="exportHint"></div>
+    </div>
+    <div class="modal-foot" style="padding-bottom:calc(20px + env(safe-area-inset-bottom))">
+      <div class="sp"></div>
+      <button class="btn btn-ghost" onclick="closeExport()">Close</button>
+      <button class="btn btn-green" onclick="copyExport()">Copy to Clipboard</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONFIG ─────────────────────────────────────────────────────────────────
+const SUPA_URL = 'https://mcbavgbmmxxczvgmglrn.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1jYmF2Z2JtbXh4Y3p2Z21nbHJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3OTIwNTYsImV4cCI6MjA5NDM2ODA1Nn0.nfSjy2nKmLCZiolHs1o4zjSe7SA2BRn5pRfkeVkEeNM';
+const { createClient } = supabase;
+const db = createClient(SUPA_URL, SUPA_KEY);
+
+// ── RATES ──────────────────────────────────────────────────────────────────
+const R = { planned:36.13, pubHol:48.17, unsoc:2.41, mile:0.45 };
+const SHIFTS = { Day:{n:12,u:0}, Night:{n:2,u:10}, Twilight:{n:7,u:5} };
+
+// ── STATE ──────────────────────────────────────────────────────────────────
+let claims = [];
+let editId = null;
+let currentUser = null;
+
+// ── AUTH ───────────────────────────────────────────────────────────────────
+async function signIn() {
+  const email    = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  const errEl    = document.getElementById('authErr');
+  const btn      = document.getElementById('signInBtn');
+
+  if (!email || !password) { showAuthErr('Please enter your email and password.'); return; }
+
+  btn.textContent = 'Signing in…';
+  btn.disabled = true;
+  errEl.style.display = 'none';
+
+  const { data, error } = await db.auth.signInWithPassword({ email, password });
+
+  if (error) {
+    showAuthErr(error.message || 'Sign in failed. Check your email and password.');
+    btn.textContent = 'Sign In';
+    btn.disabled = false;
+    return;
+  }
+
+  currentUser = data.user;
+  showApp();
+}
+
+async function signOut() {
+  await db.auth.signOut();
+  currentUser = null;
+  claims = [];
+  document.getElementById('appScreen').style.display = 'none';
+  document.getElementById('authScreen').style.display = 'flex';
+  document.getElementById('authEmail').value = '';
+  document.getElementById('authPassword').value = '';
+  document.getElementById('signInBtn').textContent = 'Sign In';
+  document.getElementById('signInBtn').disabled = false;
+}
+
+function showAuthErr(msg) {
+  const el = document.getElementById('authErr');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function showApp() {
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display = 'block';
+  document.getElementById('userPill').textContent = currentUser.email;
+  initInstallBanner();
+  loadClaims();
+}
+
+// Allow pressing Enter on password field
+document.getElementById('authPassword').addEventListener('keydown', e => {
+  if (e.key === 'Enter') signIn();
+});
+
+// ── SUPABASE CRUD ──────────────────────────────────────────────────────────
+function setSyncStatus(state, msg) {
+  const dot = document.getElementById('syncDot');
+  const txt = document.getElementById('syncTxt');
+  dot.className = 'sync-dot ' + state;
+  txt.textContent = msg;
+}
+
+async function loadClaims() {
+  setSyncStatus('loading', 'Loading claims…');
+  const { data, error } = await db
+    .from('claims')
+    .select('*')
+    .order('date', { ascending: false });
+
+  if (error) {
+    setSyncStatus('err', 'Could not load — check connection');
+    toast('✗ Failed to load claims','err');
+    return;
+  }
+
+  // Map snake_case DB columns back to camelCase used in the app
+  claims = (data || []).map(dbToApp);
+  setSyncStatus('ok', `Synced — ${claims.length} claim${claims.length!==1?'s':''}`);
+  render();
+}
+
+async function upsertClaim(claim) {
+  const row = appToDB(claim);
+  const { error } = await db.from('claims').upsert(row, { onConflict: 'id' });
+  if (error) throw error;
+}
+
+async function deleteClaimFromDB(id) {
+  const { error } = await db.from('claims').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// Map app camelCase → DB snake_case
+function appToDB(c) {
+  return {
+    id:         c.id,
+    user_id:    currentUser.id,
+    date:       c.date,
+    type:       c.type,
+    shift:      c.shift,
+    start_time: c.startTime,
+    extra_hrs:  c.extraHrs,
+    miles:      c.miles,
+    n:          c.n,
+    u:          c.u,
+    base_pay:   c.basePay,
+    unsoc_pay:  c.unsocPay,
+    trav_pay:   c.travPay,
+    total:      c.total,
+    date_sent:  c.dateSent,
+    date_ack:   c.dateAck,
+    date_paid:  c.datePaid,
+    notes:      c.notes,
+  };
+}
+
+// Map DB snake_case → app camelCase
+function dbToApp(r) {
+  return {
+    id:        r.id,
+    date:      r.date,
+    type:      r.type,
+    shift:     r.shift,
+    startTime: r.start_time,
+    extraHrs:  r.extra_hrs,
+    miles:     r.miles,
+    n:         r.n,
+    u:         r.u,
+    basePay:   r.base_pay,
+    unsocPay:  r.unsoc_pay,
+    travPay:   r.trav_pay,
+    total:     r.total,
+    dateSent:  r.date_sent,
+    dateAck:   r.date_ack,
+    datePaid:  r.date_paid,
+    notes:     r.notes,
+  };
+}
+
+// ── CALCULATIONS ───────────────────────────────────────────────────────────
+function unsocHrs(startStr, hrs) {
+  if (!startStr || !hrs) return 0;
+  const [h,m] = startStr.split(':').map(Number);
+  const s = h + m/60, e = s + parseFloat(hrs);
+  const o1 = Math.max(0, Math.min(e,24) - Math.max(s,20));
+  const o2 = e > 24 ? Math.max(0, Math.min(e-24,6)) : 0;
+  return Math.round((o1+o2)*100)/100;
+}
+
+function calc(type, shift, startTime, extraHrs, miles) {
+  let n=0, u=0;
+  if (type==='Unplanned') {
+    const eh = parseFloat(extraHrs)||0;
+    u = unsocHrs(startTime, eh);
+    n = Math.max(0, eh-u);
+  } else if (SHIFTS[shift]) {
+    n = SHIFTS[shift].n; u = SHIFTS[shift].u;
+  }
+  const rate    = type==='Public Holiday' ? R.pubHol : R.planned;
+  const basePay = (n+u)*rate;
+  const unsocPay= u*R.unsoc;
+  const travPay = (parseFloat(miles)||0)*2*R.mile;
+  return { n, u, basePay, unsocPay, travPay, total:basePay+unsocPay+travPay };
+}
+
+// ── STATUS ─────────────────────────────────────────────────────────────────
+function status(c) {
+  if (c.datePaid) return 'paid';
+  if (c.dateAck)  return 'acknowledged';
+  if (c.dateSent) return 'sent';
+  return 'pending';
+}
+
+const BADGES = {
+  paid:         `<span class="badge bp"><span class="bdot" style="background:#00C853"></span>Paid</span>`,
+  acknowledged: `<span class="badge ba"><span class="bdot" style="background:#2196F3"></span>Acknowledged</span>`,
+  sent:         `<span class="badge bs"><span class="bdot" style="background:#FFB300"></span>Sent</span>`,
+  pending:      `<span class="badge bn"><span class="bdot" style="background:#556070"></span>Pending</span>`,
+};
+
+// ── STATS ──────────────────────────────────────────────────────────────────
+function updateStats() {
+  const claimed = claims.reduce((s,c)=>s+(c.total||0),0);
+  const paid    = claims.filter(c=>c.datePaid).reduce((s,c)=>s+(c.total||0),0);
+  document.getElementById('sTot').textContent   = claims.length;
+  document.getElementById('sClaim').textContent = claimed.toFixed(2);
+  document.getElementById('sPaid').textContent  = paid.toFixed(2);
+  document.getElementById('sOut').textContent   = (claimed-paid).toFixed(2);
+  document.getElementById('sSent').textContent  = claims.filter(c=>c.dateSent&&!c.dateAck).length;
+  document.getElementById('sAck').textContent   = claims.filter(c=>c.dateAck&&!c.datePaid).length;
+}
+
+// ── RENDER ─────────────────────────────────────────────────────────────────
+function render() {
+  const fs = document.getElementById('fSt').value;
+  const ft = document.getElementById('fTy').value;
+  const fq = document.getElementById('fQ').value.toLowerCase();
+
+  const data = claims.filter(c => {
+    if (fs && status(c)!==fs) return false;
+    if (ft && c.type!==ft) return false;
+    if (fq && !JSON.stringify(c).toLowerCase().includes(fq)) return false;
+    return true;
+  });
+
+  const tbody = document.getElementById('tbody');
+  const empty = document.getElementById('empty');
+
+  if (!data.length) { tbody.innerHTML=''; empty.style.display='block'; updateStats(); return; }
+  empty.style.display='none';
+
+  const fd = d => d ? d.split('-').reverse().join('/') : '<span class="cdash">—</span>';
+  const fm = v => v>0 ? `£${v.toFixed(2)}` : '<span class="cdash">—</span>';
+
+  tbody.innerHTML = data.map((c,i) => {
+    const st = status(c);
+    const rc = st==='paid'?'rp':st==='acknowledged'?'ra':st==='sent'?'rs':'';
+    const shiftInfo = c.type==='Unplanned'
+      ? `+${c.extraHrs||0}h @ ${c.startTime||'?'}`
+      : (c.shift||'<span class="cdash">—</span>');
+    return `<tr class="${rc}">
+      <td class="cid">${String(i+1).padStart(3,'0')}</td>
+      <td class="cdate">${fd(c.date)}</td>
+      <td style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--t2)">${c.type}</td>
+      <td style="font-size:11px;color:var(--t2)">${shiftInfo}</td>
+      <td class="cmono">${(c.n||0).toFixed(2)}</td>
+      <td class="cmono">${(c.u||0)>0?(c.u).toFixed(2):'<span class="cdash">—</span>'}</td>
+      <td class="cmoney">${fm(c.basePay)}</td>
+      <td class="cmoney">${fm(c.unsocPay)}</td>
+      <td class="cmoney">${fm(c.travPay)}</td>
+      <td class="ctotal">£${(c.total||0).toFixed(2)}</td>
+      <td>${BADGES[st]}</td>
+      <td class="cdate">${fd(c.dateSent)}</td>
+      <td class="cdate">${fd(c.dateAck)}</td>
+      <td class="cdate">${fd(c.datePaid)}</td>
+      <td class="cnotes" title="${c.notes||''}">${c.notes||'<span class="cdash">—</span>'}</td>
+      <td><button class="btn btn-ghost" style="font-size:10px;padding:5px 9px" onclick="openModal('${c.id}')">Edit</button></td>
+    </tr>`;
+  }).join('');
+
+  updateStats();
+}
+
+// ── MODAL ──────────────────────────────────────────────────────────────────
+function openModal(id=null) {
+  editId = id;
+  document.getElementById('mTitle').textContent = id ? 'Edit Claim' : 'New Claim';
+  document.getElementById('btnDel').style.display = id ? 'inline-flex' : 'none';
+  document.getElementById('saveBtn').textContent = 'Save Claim';
+  document.getElementById('saveBtn').disabled = false;
+
+  ['fDate','fSent','fAck','fPaid','fNotes','fStart','fExtra','fMiles']
+    .forEach(f => document.getElementById(f).value='');
+  document.getElementById('fType').value  = '';
+  document.getElementById('fShift').value = '';
+
+  if (id) {
+    const c = claims.find(x=>x.id===id);
+    if (c) {
+      document.getElementById('fDate').value  = c.date||'';
+      document.getElementById('fType').value  = c.type||'';
+      document.getElementById('fShift').value = c.shift||'';
+      document.getElementById('fStart').value = c.startTime||'';
+      document.getElementById('fExtra').value = c.extraHrs||'';
+      document.getElementById('fMiles').value = c.miles||'';
+      document.getElementById('fSent').value  = c.dateSent||'';
+      document.getElementById('fAck').value   = c.dateAck||'';
+      document.getElementById('fPaid').value  = c.datePaid||'';
+      document.getElementById('fNotes').value = c.notes||'';
+    }
+  }
+  typeChanged();
+  document.getElementById('overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  document.getElementById('overlay').classList.remove('open');
+  document.body.style.overflow = '';
+  editId = null;
+}
+
+function outsideClose(e) {
+  if (e.target===document.getElementById('overlay')) closeModal();
+}
+
+function typeChanged() {
+  const t = document.getElementById('fType').value;
+  const u = t==='Unplanned';
+  document.getElementById('gShift').style.display       = u?'none':'flex';
+  document.getElementById('gShiftSpacer').style.display = u?'none':'flex';
+  document.getElementById('gStart').style.display       = u?'flex':'none';
+  document.getElementById('gExtra').style.display       = u?'flex':'none';
+  recalc();
+}
+
+function recalc() {
+  const t  = document.getElementById('fType').value;
+  const sh = document.getElementById('fShift').value;
+  const st = document.getElementById('fStart').value;
+  const eh = document.getElementById('fExtra').value;
+  const mi = document.getElementById('fMiles').value;
+  if (!t) {
+    ['pvN','pvU','pvT','pvTot'].forEach(id => {
+      const el=document.getElementById(id); el.textContent='—'; el.className='cv-v dim';
+    });
+    return;
+  }
+  const r = calc(t,sh,st,eh,mi);
+  document.getElementById('pvN').textContent   = r.n.toFixed(2)+'h';
+  document.getElementById('pvU').textContent   = r.u>0?r.u.toFixed(2)+'h':'—';
+  document.getElementById('pvT').textContent   = r.travPay>0?'£'+r.travPay.toFixed(2):'—';
+  document.getElementById('pvTot').textContent = '£'+r.total.toFixed(2);
+  ['pvN','pvTot'].forEach(id=>document.getElementById(id).className='cv-v');
+}
+
+async function saveClaim() {
+  const date = document.getElementById('fDate').value;
+  const type = document.getElementById('fType').value;
+  if (!date||!type) { toast('Date and OT Type are required','err'); return; }
+
+  const btn = document.getElementById('saveBtn');
+  btn.textContent = 'Saving…';
+  btn.disabled = true;
+
+  const shift     = document.getElementById('fShift').value;
+  const startTime = document.getElementById('fStart').value;
+  const extraHrs  = parseFloat(document.getElementById('fExtra').value)||0;
+  const miles     = parseFloat(document.getElementById('fMiles').value)||0;
+  const r = calc(type,shift,startTime,extraHrs,miles);
+
+  const claim = {
+    id: editId || Date.now().toString(),
+    date, type, shift, startTime, extraHrs, miles,
+    n:r.n, u:r.u,
+    basePay:r.basePay, unsocPay:r.unsocPay, travPay:r.travPay, total:r.total,
+    dateSent: document.getElementById('fSent').value,
+    dateAck:  document.getElementById('fAck').value,
+    datePaid: document.getElementById('fPaid').value,
+    notes:    document.getElementById('fNotes').value,
+  };
+
+  try {
+    await upsertClaim(claim);
+    if (editId) {
+      const i = claims.findIndex(c=>c.id===editId);
+      if (i!==-1) claims[i]=claim; else claims.unshift(claim);
+    } else {
+      claims.unshift(claim);
+    }
+    closeModal();
+    render();
+    setSyncStatus('ok', `Synced — ${claims.length} claim${claims.length!==1?'s':''}`);
+    toast('✓ Claim saved','ok');
+  } catch(err) {
+    toast('✗ Save failed — check connection','err');
+    btn.textContent = 'Save Claim';
+    btn.disabled = false;
+  }
+}
+
+// ── CONFIRM DIALOG ─────────────────────────────────────────────────────────
+function showConfirm(opts) {
+  return new Promise(resolve => {
+    document.getElementById('confirmIcon').textContent  = opts.icon||'⚠️';
+    document.getElementById('confirmTitle').textContent = opts.title||'Are you sure?';
+    document.getElementById('confirmMsg').textContent   = opts.msg||'';
+    const btns = document.getElementById('confirmBtns');
+    btns.innerHTML='';
+    (opts.buttons||[{label:'OK',style:'btn-primary',value:true},{label:'Cancel',style:'btn-ghost',value:false}])
+      .forEach(b=>{
+        const el=document.createElement('button');
+        el.className=`btn btn-full ${b.style}`;
+        el.textContent=b.label;
+        el.onclick=()=>{
+          document.getElementById('confirmOverlay').classList.remove('open');
+          document.body.style.overflow='';
+          resolve(b.value);
+        };
+        btns.appendChild(el);
+      });
+    document.getElementById('confirmOverlay').classList.add('open');
+    document.body.style.overflow='hidden';
+  });
+}
+
+async function confirmDelete() {
+  if (!editId) return;
+  const yes = await showConfirm({
+    icon:'🗑️', title:'Delete Claim',
+    msg:'This cannot be undone. The claim will be permanently removed from the cloud.',
+    buttons:[
+      {label:'Delete',style:'btn-danger',value:true},
+      {label:'Cancel',style:'btn-ghost',value:false}
+    ]
+  });
+  if (!yes) return;
+  try {
+    await deleteClaimFromDB(editId);
+    claims = claims.filter(c=>c.id!==editId);
+    closeModal(); render();
+    setSyncStatus('ok', `Synced — ${claims.length} claim${claims.length!==1?'s':''}`);
+    toast('Claim deleted','ok');
+  } catch {
+    toast('✗ Delete failed — check connection','err');
+  }
+}
+
+// ── EXPORT CSV ─────────────────────────────────────────────────────────────
+function exportCSV() {
+  if (!claims.length) { toast('No claims to export','err'); return; }
+  const H = ['#','Date','Type','Shift','Normal h','Unsoc h','Base Pay','Unsoc Pay','Travel Pay','Total','Status','Sent','Acknowledged','Paid','Notes'];
+  const rows = claims.map((c,i)=>[
+    i+1,c.date,c.type,
+    c.type==='Unplanned'?`+${c.extraHrs}h @ ${c.startTime}`:c.shift,
+    (c.n||0).toFixed(2),(c.u||0).toFixed(2),
+    (c.basePay||0).toFixed(2),(c.unsocPay||0).toFixed(2),(c.travPay||0).toFixed(2),(c.total||0).toFixed(2),
+    status(c),c.dateSent||'',c.dateAck||'',c.datePaid||'',c.notes||''
+  ]);
+  const csv=[H,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+
+  if (isIOS()) {
+    openExportModal('Export CSV', csv,
+      '<strong>Copy</strong> the text and paste into an email or Notes. Open in Numbers or Excel on your computer.');
+    return;
+  }
+  try {
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+    a.download=`overtime_claims_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    toast('✓ CSV downloaded','ok');
+  } catch {
+    openExportModal('Export CSV', csv, 'Copy the text and save it as a .csv file.');
+  }
+}
+
+// ── EXPORT MODAL ───────────────────────────────────────────────────────────
+function isIOS(){ return /iphone|ipad|ipod/i.test(navigator.userAgent); }
+
+function openExportModal(title, content, hint) {
+  document.getElementById('exportTitle').textContent = title;
+  document.getElementById('exportTA').value = content;
+  document.getElementById('exportHint').innerHTML = hint;
+  document.getElementById('exportOverlay').classList.add('open');
+  document.body.style.overflow='hidden';
+  setTimeout(()=>{ const ta=document.getElementById('exportTA'); ta.focus(); ta.select(); },300);
+}
+function closeExport(){ document.getElementById('exportOverlay').classList.remove('open'); document.body.style.overflow=''; }
+function outsideCloseExport(e){ if(e.target===document.getElementById('exportOverlay')) closeExport(); }
+async function copyExport(){
+  const text=document.getElementById('exportTA').value;
+  try{ await navigator.clipboard.writeText(text); toast('✓ Copied to clipboard','ok'); }
+  catch{
+    const ta=document.getElementById('exportTA'); ta.focus(); ta.select();
+    try{ document.execCommand('copy'); toast('✓ Copied','ok'); }
+    catch{ toast('Select the text above manually','err'); }
+  }
+}
+
+// ── INSTALL BANNER ─────────────────────────────────────────────────────────
+function initInstallBanner(){
+  const isIos=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone=('standalone' in navigator)&&navigator.standalone;
+  const dismissed=localStorage.getItem('ot_install_dismissed');
+  if(isIos&&!isStandalone&&!dismissed) document.getElementById('installBanner').style.display='block';
+}
+function dismissInstall(){
+  localStorage.setItem('ot_install_dismissed','1');
+  document.getElementById('installBanner').style.display='none';
+}
+
+// ── TOAST ──────────────────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg,type='ok'){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.className=`toast ${type} show`;
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove('show'),3200);
+}
+
+// ── INIT ───────────────────────────────────────────────────────────────────
+(async () => {
+  // Check if already logged in (persisted session)
+  const { data: { session } } = await db.auth.getSession();
+  if (session?.user) {
+    currentUser = session.user;
+    showApp();
+  }
+  // Otherwise auth screen stays visible
+})();
+</script>
+</body>
+</html>
