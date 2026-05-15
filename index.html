@@ -349,6 +349,12 @@ tr:hover td{background:rgba(255,255,255,.03)!important;}
 .toast.err{border-color:rgba(244,67,54,.4);}
 
 #importInput{display:none;}
+
+/* ── BULK ACTION BAR ── */
+.bulk-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:rgba(0,188,212,.07);border:1px solid rgba(0,188,212,.35);border-radius:10px;padding:10px 16px;margin-bottom:14px;}
+.bulk-count{font-family:var(--mono);font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--teal);flex-shrink:0;}
+.bulk-actions{display:flex;gap:8px;flex-wrap:wrap;}
+input.row-chk{cursor:pointer;width:14px;height:14px;accent-color:var(--teal);}
 </style>
 </head>
 <body>
@@ -389,6 +395,7 @@ tr:hover td{background:rgba(255,255,255,.03)!important;}
   </div>
   <div class="header-actions">
     <span class="user-pill" id="userPill">—</span>
+    <button class="btn btn-ghost" onclick="openSettings()" title="Rate Settings">⚙</button>
     <button class="btn btn-ghost" onclick="signOut()">Sign Out</button>
   </div>
 </header>
@@ -452,11 +459,23 @@ tr:hover td{background:rgba(255,255,255,.03)!important;}
     <input type="text" id="fQ" placeholder="Search…" oninput="render()" style="width:120px">
   </div>
 
+  <!-- Bulk action bar -->
+  <div id="bulkBar" class="bulk-bar" style="display:none">
+    <span class="bulk-count" id="bulkCount">0 selected</span>
+    <div class="bulk-actions">
+      <button class="btn btn-ghost" onclick="bulkMark('dateSent')">Mark Sent</button>
+      <button class="btn btn-ghost" onclick="bulkMark('dateAck')">Mark Acknowledged</button>
+      <button class="btn btn-green" style="font-size:11px;padding:7px 12px" onclick="bulkMark('datePaid')">Mark Paid</button>
+      <button class="btn btn-ghost" onclick="clearSelection()">✕ Clear</button>
+    </div>
+  </div>
+
   <!-- Table -->
   <div class="table-outer">
     <table>
       <thead>
         <tr>
+          <th><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this.checked)" style="cursor:pointer;width:14px;height:14px;accent-color:var(--teal)"></th>
           <th>#</th><th>Date</th><th>Type</th><th>Shift / Info</th>
           <th>Normal h</th><th>Unsoc h</th>
           <th>Base Pay</th><th>Unsoc Pay</th><th>Travel Pay</th><th>Travel Claimed</th>
@@ -570,6 +589,32 @@ tr:hover td{background:rgba(255,255,255,.03)!important;}
 
 <div class="toast" id="toast"></div>
 
+<!-- ── SETTINGS MODAL ── -->
+<div class="overlay" id="settingsOverlay" onclick="outsideCloseSettings(event)">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-head">
+      <h2>⚙ Rate Settings</h2>
+      <button class="modal-x" onclick="closeSettings()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="fg">
+        <div class="fsec">Pay Rates</div>
+        <div class="f"><label>Planned OT Rate (£/hr)</label><input type="number" id="sPlanned" step="0.01" min="0"></div>
+        <div class="f"><label>Public Holiday Rate (£/hr)</label><input type="number" id="sPubHol" step="0.01" min="0"></div>
+        <div class="f"><label>Unsociable Premium (£/hr add-on)</label><input type="number" id="sUnsoc" step="0.01" min="0"></div>
+        <div class="f"><label>Mileage Rate (£/mile)</label><input type="number" id="sMile" step="0.001" min="0"></div>
+      </div>
+      <p style="font-size:11px;color:var(--t3);margin-top:14px;line-height:1.6">Changes apply to new claims only. Existing saved pay figures are not recalculated.</p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="restoreDefaultRates()">Restore Defaults</button>
+      <div class="sp"></div>
+      <button class="btn btn-ghost" onclick="closeSettings()">Cancel</button>
+      <button class="btn btn-green" onclick="saveSettings()">Save Settings</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ── CONFIG ─────────────────────────────────────────────────────────────────
 const SUPA_URL = 'https://mcbavgbmmxxczvgmglrn.supabase.co';
@@ -578,13 +623,16 @@ const { createClient } = supabase;
 const db = createClient(SUPA_URL, SUPA_KEY);
 
 // ── RATES ──────────────────────────────────────────────────────────────────
-const R = { planned:36.13, pubHol:48.17, unsoc:2.41, mile:0.45 };
+let R = { planned:36.13, pubHol:48.17, unsoc:2.41, mile:0.45 };
+const R_DEFAULTS = { planned:36.13, pubHol:48.17, unsoc:2.41, mile:0.45 };
 const SHIFTS = { Day:{n:12,u:0}, Night:{n:2,u:10}, Twilight:{n:7,u:5} };
 
 // ── STATE ──────────────────────────────────────────────────────────────────
 let claims = [];
 let editId = null;
 let currentUser = null;
+let selectedIds = new Set();
+let _visibleIds = [];
 
 // ── AUTH ───────────────────────────────────────────────────────────────────
 async function signIn() {
@@ -616,6 +664,7 @@ async function signOut() {
   await db.auth.signOut();
   currentUser = null;
   claims = [];
+  selectedIds.clear();
   document.getElementById('appScreen').style.display = 'none';
   document.getElementById('authScreen').style.display = 'flex';
   document.getElementById('authEmail').value = '';
@@ -630,12 +679,66 @@ function showAuthErr(msg) {
   el.style.display = 'block';
 }
 
-function showApp() {
+async function showApp() {
   document.getElementById('authScreen').style.display = 'none';
   document.getElementById('appScreen').style.display = 'block';
   document.getElementById('userPill').textContent = currentUser.email;
   initInstallBanner();
+  await loadSettings();
   loadClaims();
+}
+
+// ── SETTINGS ───────────────────────────────────────────────────────────────
+async function loadSettings() {
+  const { data, error } = await db.from('settings').select('*')
+    .eq('user_id', currentUser.id).single();
+  if (!error && data) {
+    R.planned = parseFloat(data.planned_rate) || R_DEFAULTS.planned;
+    R.pubHol  = parseFloat(data.pub_hol_rate) || R_DEFAULTS.pubHol;
+    R.unsoc   = parseFloat(data.unsoc_rate)   || R_DEFAULTS.unsoc;
+    R.mile    = parseFloat(data.mile_rate)    || R_DEFAULTS.mile;
+  }
+}
+
+async function saveSettings() {
+  const planned = parseFloat(document.getElementById('sPlanned').value);
+  const pubHol  = parseFloat(document.getElementById('sPubHol').value);
+  const unsoc   = parseFloat(document.getElementById('sUnsoc').value);
+  const mile    = parseFloat(document.getElementById('sMile').value);
+  if ([planned, pubHol, unsoc, mile].some(isNaN)) { toast('✗ All fields must be valid numbers','err'); return; }
+  const { error } = await db.from('settings').upsert(
+    { user_id:currentUser.id, planned_rate:planned, pub_hol_rate:pubHol, unsoc_rate:unsoc, mile_rate:mile },
+    { onConflict:'user_id' }
+  );
+  if (error) { toast('✗ Failed to save settings','err'); return; }
+  R.planned=planned; R.pubHol=pubHol; R.unsoc=unsoc; R.mile=mile;
+  closeSettings();
+  toast('✓ Rates saved','ok');
+}
+
+function openSettings() {
+  document.getElementById('sPlanned').value = R.planned;
+  document.getElementById('sPubHol').value  = R.pubHol;
+  document.getElementById('sUnsoc').value   = R.unsoc;
+  document.getElementById('sMile').value    = R.mile;
+  document.getElementById('settingsOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeSettings() {
+  document.getElementById('settingsOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function outsideCloseSettings(e) {
+  if (e.target === document.getElementById('settingsOverlay')) closeSettings();
+}
+
+function restoreDefaultRates() {
+  document.getElementById('sPlanned').value = R_DEFAULTS.planned;
+  document.getElementById('sPubHol').value  = R_DEFAULTS.pubHol;
+  document.getElementById('sUnsoc').value   = R_DEFAULTS.unsoc;
+  document.getElementById('sMile').value    = R_DEFAULTS.mile;
 }
 
 // Allow pressing Enter on password field
@@ -792,6 +895,52 @@ function updateStats() {
   document.getElementById('sAck').textContent          = claims.filter(c=>c.dateAck&&!c.datePaid).length;
 }
 
+// ── BULK SELECTION ─────────────────────────────────────────────────────────
+function toggleSelect(id, checked) {
+  if (checked) selectedIds.add(id); else selectedIds.delete(id);
+  updateBulkBar();
+}
+
+function toggleSelectAll(checked) {
+  if (checked) _visibleIds.forEach(id => selectedIds.add(id));
+  else _visibleIds.forEach(id => selectedIds.delete(id));
+  render();
+}
+
+function updateBulkBar() {
+  const n = selectedIds.size;
+  document.getElementById('bulkBar').style.display = n > 0 ? 'flex' : 'none';
+  document.getElementById('bulkCount').textContent = `${n} selected`;
+  const sa = document.getElementById('selectAll');
+  if (sa) {
+    const vis = _visibleIds.filter(id => selectedIds.has(id)).length;
+    sa.checked = _visibleIds.length > 0 && vis === _visibleIds.length;
+    sa.indeterminate = vis > 0 && vis < _visibleIds.length;
+  }
+}
+
+function clearSelection() {
+  selectedIds.clear();
+  render();
+}
+
+async function bulkMark(field) {
+  const today = new Date().toISOString().slice(0,10);
+  const toUpdate = claims.filter(c => selectedIds.has(c.id) && !c[field]);
+  if (!toUpdate.length) { toast('All selected claims already have this date set','err'); return; }
+  toUpdate.forEach(c => { c[field] = today; });
+  try {
+    await Promise.all(toUpdate.map(c => upsertClaim(c)));
+    clearSelection();
+    setSyncStatus('ok', `Synced — ${claims.length} claim${claims.length!==1?'s':''}`);
+    toast(`✓ Updated ${toUpdate.length} claim${toUpdate.length!==1?'s':''}`, 'ok');
+  } catch {
+    toUpdate.forEach(c => { c[field] = null; });
+    render();
+    toast('✗ Bulk update failed — check connection','err');
+  }
+}
+
 // ── RENDER ─────────────────────────────────────────────────────────────────
 function render() {
   const fs = document.getElementById('fSt').value;
@@ -804,6 +953,7 @@ function render() {
     if (fq && !JSON.stringify(c).toLowerCase().includes(fq)) return false;
     return true;
   });
+  _visibleIds = data.map(c => c.id);
 
   const tbody = document.getElementById('tbody');
   const empty = document.getElementById('empty');
@@ -827,6 +977,7 @@ function render() {
 
     const shiftTotal = (c.basePay||0) + (c.unsocPay||0);
     return `<tr class="${rc}">
+      <td style="width:36px;padding:6px;border-right:1px solid var(--b1)"><input type="checkbox" class="row-chk" ${selectedIds.has(c.id)?'checked':''} onchange="toggleSelect('${c.id}',this.checked)" style="cursor:pointer;width:14px;height:14px;accent-color:var(--teal)"></td>
       <td class="cid">${String(i+1).padStart(3,'0')}</td>
       <td class="cdate">${fd(c.date)}</td>
       <td style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--t2)">${c.type}</td>
@@ -848,6 +999,7 @@ function render() {
   }).join('');
 
   updateStats();
+  updateBulkBar();
 }
 
 // ── MODAL ──────────────────────────────────────────────────────────────────
