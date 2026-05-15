@@ -355,6 +355,14 @@ tr:hover td{background:rgba(255,255,255,.03)!important;}
 .bulk-count{font-family:var(--mono);font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--teal);flex-shrink:0;}
 .bulk-actions{display:flex;gap:8px;flex-wrap:wrap;}
 input.row-chk{cursor:pointer;width:14px;height:14px;accent-color:var(--teal);}
+
+/* ── SETTINGS LISTS ── */
+.settings-list-row{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--s2);border:1px solid var(--b1);border-radius:6px;margin-bottom:6px;font-size:12px;}
+.settings-list-name{font-family:var(--mono);font-weight:700;flex:1;color:var(--t1);}
+.settings-list-detail{color:var(--t2);font-size:11px;}
+.settings-empty{font-size:11px;color:var(--t3);padding:6px 0;}
+button.tbadge-pending{font-family:var(--mono);font-size:9px;font-weight:700;color:var(--t3);background:transparent;border:1px solid var(--b1);border-radius:20px;padding:2px 7px;cursor:pointer;transition:border-color .15s,color .15s;}
+button.tbadge-pending:hover{border-color:var(--teal);color:var(--teal);}
 </style>
 </head>
 <body>
@@ -591,10 +599,10 @@ input.row-chk{cursor:pointer;width:14px;height:14px;accent-color:var(--teal);}
 
 <!-- ── SETTINGS MODAL ── -->
 <div class="overlay" id="settingsOverlay" onclick="outsideCloseSettings(event)">
-  <div class="modal" style="max-width:480px">
+  <div class="modal" style="max-width:580px">
     <div class="modal-head">
       <h2>⚙ Rate Settings</h2>
-      <button class="modal-x" onclick="closeSettings()">✕</button>
+      <button class="modal-x" onclick="cancelSettings()">✕</button>
     </div>
     <div class="modal-body">
       <div class="fg">
@@ -605,11 +613,36 @@ input.row-chk{cursor:pointer;width:14px;height:14px;accent-color:var(--teal);}
         <div class="f"><label>Mileage Rate (£/mile)</label><input type="number" id="sMile" step="0.001" min="0"></div>
       </div>
       <p style="font-size:11px;color:var(--t3);margin-top:14px;line-height:1.6">Changes apply to new claims only. Existing saved pay figures are not recalculated.</p>
+
+      <hr class="fdiv" style="margin:16px 0">
+      <div class="fsec" style="margin-bottom:8px">Custom Shifts</div>
+      <div id="settingsShiftList" style="margin-bottom:10px"></div>
+      <div style="background:var(--bg);border:1px solid var(--b1);border-radius:8px;padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="f"><label>Name</label><input type="text" id="snName" placeholder="e.g. Early"></div>
+        <div class="f"><label>Start Time</label><input type="time" id="snStart"></div>
+        <div class="f"><label>Duration (hrs)</label><input type="number" id="snHours" step="0.5" min="1" max="24" placeholder="12"></div>
+        <div class="f"><label style="opacity:0">.</label><button class="btn btn-primary" onclick="addTempShift()" style="width:100%;justify-content:center">+ Add</button></div>
+      </div>
+
+      <hr class="fdiv" style="margin:16px 0">
+      <div class="fsec" style="margin-bottom:8px">Custom OT Types</div>
+      <div id="settingsTypeList" style="margin-bottom:10px"></div>
+      <div style="background:var(--bg);border:1px solid var(--b1);border-radius:8px;padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="f"><label>Type Name</label><input type="text" id="tnName" placeholder="e.g. Bank Holiday"></div>
+        <div class="f"><label>Hourly Rate (£)</label><input type="number" id="tnRate" step="0.01" min="0" placeholder="36.13"></div>
+        <div class="f"><label>Behavior</label>
+          <select id="tnBehavior">
+            <option value="shift">Shift-based (shift picker)</option>
+            <option value="unplanned">Hours-based (time + hours)</option>
+          </select>
+        </div>
+        <div class="f"><label style="opacity:0">.</label><button class="btn btn-primary" onclick="addTempType()" style="width:100%;justify-content:center">+ Add</button></div>
+      </div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="restoreDefaultRates()">Restore Defaults</button>
       <div class="sp"></div>
-      <button class="btn btn-ghost" onclick="closeSettings()">Cancel</button>
+      <button class="btn btn-ghost" onclick="cancelSettings()">Cancel</button>
       <button class="btn btn-green" onclick="saveSettings()">Save Settings</button>
     </div>
   </div>
@@ -625,7 +658,8 @@ const db = createClient(SUPA_URL, SUPA_KEY);
 // ── RATES ──────────────────────────────────────────────────────────────────
 let R = { planned:36.13, pubHol:48.17, unsoc:2.41, mile:0.45 };
 const R_DEFAULTS = { planned:36.13, pubHol:48.17, unsoc:2.41, mile:0.45 };
-const SHIFTS = { Day:{n:12,u:0}, Night:{n:2,u:10}, Twilight:{n:7,u:5} };
+const DEFAULT_SHIFTS = { Day:{n:12,u:0}, Night:{n:2,u:10}, Twilight:{n:7,u:5} };
+let SHIFTS = { ...DEFAULT_SHIFTS };
 
 // ── STATE ──────────────────────────────────────────────────────────────────
 let claims = [];
@@ -633,6 +667,10 @@ let editId = null;
 let currentUser = null;
 let selectedIds = new Set();
 let _visibleIds = [];
+let userShifts = [];
+let userTypes  = [];
+let _settingsSnapshot = null;
+const BUILTIN_TYPES = new Set(['Planned','Unplanned','Public Holiday']);
 
 // ── AUTH ───────────────────────────────────────────────────────────────────
 async function signIn() {
@@ -697,7 +735,12 @@ async function loadSettings() {
     R.pubHol  = parseFloat(data.pub_hol_rate) || R_DEFAULTS.pubHol;
     R.unsoc   = parseFloat(data.unsoc_rate)   || R_DEFAULTS.unsoc;
     R.mile    = parseFloat(data.mile_rate)    || R_DEFAULTS.mile;
+    userShifts.splice(0, userShifts.length, ...(data.custom_shifts || []));
+    userTypes.splice(0, userTypes.length,   ...(data.custom_types  || []));
   }
+  rebuildShifts();
+  populateShiftSelect();
+  populateTypeSelects();
 }
 
 async function saveSettings() {
@@ -705,33 +748,55 @@ async function saveSettings() {
   const pubHol  = parseFloat(document.getElementById('sPubHol').value);
   const unsoc   = parseFloat(document.getElementById('sUnsoc').value);
   const mile    = parseFloat(document.getElementById('sMile').value);
-  if ([planned, pubHol, unsoc, mile].some(isNaN)) { toast('✗ All fields must be valid numbers','err'); return; }
+  if ([planned, pubHol, unsoc, mile].some(isNaN)) { toast('✗ All rate fields must be valid numbers','err'); return; }
   const { error } = await db.from('settings').upsert(
-    { user_id:currentUser.id, planned_rate:planned, pub_hol_rate:pubHol, unsoc_rate:unsoc, mile_rate:mile },
+    { user_id:currentUser.id, planned_rate:planned, pub_hol_rate:pubHol, unsoc_rate:unsoc, mile_rate:mile,
+      custom_shifts:userShifts, custom_types:userTypes },
     { onConflict:'user_id' }
   );
   if (error) { toast('✗ Failed to save settings','err'); return; }
   R.planned=planned; R.pubHol=pubHol; R.unsoc=unsoc; R.mile=mile;
+  rebuildShifts(); populateShiftSelect(); populateTypeSelects();
   closeSettings();
-  toast('✓ Rates saved','ok');
+  toast('✓ Settings saved','ok');
 }
 
 function openSettings() {
+  _settingsSnapshot = {
+    R: {...R},
+    userShifts: userShifts.map(s=>({...s})),
+    userTypes:  userTypes.map(t=>({...t}))
+  };
   document.getElementById('sPlanned').value = R.planned;
   document.getElementById('sPubHol').value  = R.pubHol;
   document.getElementById('sUnsoc').value   = R.unsoc;
   document.getElementById('sMile').value    = R.mile;
+  renderSettingsShifts();
+  renderSettingsTypes();
   document.getElementById('settingsOverlay').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
 
-function closeSettings() {
+function closeSettings() {  // called only after successful save
+  _settingsSnapshot = null;
+  document.getElementById('settingsOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function cancelSettings() {  // ✕, Cancel button, outside-click
+  if (_settingsSnapshot) {
+    Object.assign(R, _settingsSnapshot.R);
+    userShifts.splice(0, userShifts.length, ..._settingsSnapshot.userShifts);
+    userTypes.splice(0, userTypes.length,   ..._settingsSnapshot.userTypes);
+    rebuildShifts(); populateShiftSelect(); populateTypeSelects();
+    _settingsSnapshot = null;
+  }
   document.getElementById('settingsOverlay').classList.remove('open');
   document.body.style.overflow = '';
 }
 
 function outsideCloseSettings(e) {
-  if (e.target === document.getElementById('settingsOverlay')) closeSettings();
+  if (e.target === document.getElementById('settingsOverlay')) cancelSettings();
 }
 
 function restoreDefaultRates() {
@@ -740,6 +805,57 @@ function restoreDefaultRates() {
   document.getElementById('sUnsoc').value   = R_DEFAULTS.unsoc;
   document.getElementById('sMile').value    = R_DEFAULTS.mile;
 }
+
+// ── SHIFT / TYPE MANAGEMENT ────────────────────────────────────────────────
+function renderSettingsShifts() {
+  const el = document.getElementById('settingsShiftList');
+  el.innerHTML = userShifts.length
+    ? userShifts.map((s,i) => {
+        const {n,u} = computeShiftHours(s.start, s.hours);
+        return `<div class="settings-list-row">
+          <span class="settings-list-name">${s.name}</span>
+          <span class="settings-list-detail">${s.start} · ${s.hours}h · ${n.toFixed(1)}n/${u.toFixed(1)}u</span>
+          <button class="btn btn-danger" style="font-size:10px;padding:4px 8px" onclick="deleteTempShift(${i})">✕</button>
+        </div>`;
+      }).join('')
+    : '<div class="settings-empty">No custom shifts yet.</div>';
+}
+
+function addTempShift() {
+  const name  = document.getElementById('snName').value.trim();
+  const start = document.getElementById('snStart').value;
+  const hours = parseFloat(document.getElementById('snHours').value);
+  if (!name||!start||isNaN(hours)||hours<=0) { toast('✗ Name, start time, and duration required','err'); return; }
+  userShifts.push({name, start, hours});
+  ['snName','snStart','snHours'].forEach(id => document.getElementById(id).value='');
+  renderSettingsShifts();
+}
+
+function deleteTempShift(i) { userShifts.splice(i,1); renderSettingsShifts(); }
+
+function renderSettingsTypes() {
+  const el = document.getElementById('settingsTypeList');
+  el.innerHTML = userTypes.length
+    ? userTypes.map((t,i) => `<div class="settings-list-row">
+        <span class="settings-list-name">${t.name}</span>
+        <span class="settings-list-detail">£${t.rate.toFixed(2)}/hr · ${t.behavior==='unplanned'?'hours-based':'shift-based'}</span>
+        <button class="btn btn-danger" style="font-size:10px;padding:4px 8px" onclick="deleteTempType(${i})">✕</button>
+      </div>`).join('')
+    : '<div class="settings-empty">No custom types yet.</div>';
+}
+
+function addTempType() {
+  const name     = document.getElementById('tnName').value.trim();
+  const rate     = parseFloat(document.getElementById('tnRate').value);
+  const behavior = document.getElementById('tnBehavior').value;
+  if (!name||isNaN(rate)||rate<=0) { toast('✗ Name and rate required','err'); return; }
+  if (BUILTIN_TYPES.has(name)||userTypes.find(t=>t.name===name)) { toast('✗ That name is already in use','err'); return; }
+  userTypes.push({name, rate, behavior});
+  ['tnName','tnRate'].forEach(id => document.getElementById(id).value='');
+  renderSettingsTypes();
+}
+
+function deleteTempType(i) { userTypes.splice(i,1); renderSettingsTypes(); }
 
 // Allow pressing Enter on password field
 document.getElementById('authPassword').addEventListener('keydown', e => {
@@ -834,6 +950,32 @@ function dbToApp(r) {
 }
 
 // ── CALCULATIONS ───────────────────────────────────────────────────────────
+function computeShiftHours(start, hours) {
+  const u = unsocHrs(start, parseFloat(hours)||0);
+  return { n: Math.max(0, (parseFloat(hours)||0) - u), u };
+}
+function rebuildShifts() {
+  SHIFTS = { ...DEFAULT_SHIFTS };
+  userShifts.forEach(s => { const {n,u}=computeShiftHours(s.start,s.hours); SHIFTS[s.name]={n,u}; });
+}
+function populateShiftSelect() {
+  const sel=document.getElementById('fShift'), cur=sel.value;
+  sel.innerHTML='<option value="">— Select shift —</option>';
+  [['Day','Day  07:00 – 19:00'],['Night','Night  19:00 – 07:00'],['Twilight','Twilight  13:00 – 01:00']]
+    .forEach(([v,l])=>sel.add(new Option(l,v)));
+  userShifts.forEach(s=>sel.add(new Option(`${s.name}  ${s.start} (${s.hours}h)`,s.name)));
+  sel.value=cur;
+}
+function populateTypeSelects() {
+  ['fType','fTy'].forEach(selId=>{
+    const sel=document.getElementById(selId), cur=sel.value;
+    sel.innerHTML=selId==='fTy'?'<option value="">All Types</option>':'<option value="">— Select —</option>';
+    ['Planned','Unplanned','Public Holiday'].forEach(t=>sel.add(new Option(t,t)));
+    userTypes.forEach(t=>sel.add(new Option(t.name,t.name)));
+    sel.value=cur;
+  });
+}
+
 function unsocHrs(startStr, hrs) {
   if (!startStr || !hrs) return 0;
   const [h,m] = startStr.split(':').map(Number);
@@ -844,15 +986,17 @@ function unsocHrs(startStr, hrs) {
 }
 
 function calc(type, shift, startTime, extraHrs, miles) {
+  const customType = userTypes.find(t => t.name === type);
+  const isUnplanned = type==='Unplanned' || (customType && customType.behavior==='unplanned');
   let n=0, u=0;
-  if (type==='Unplanned') {
+  if (isUnplanned) {
     const eh = parseFloat(extraHrs)||0;
     u = unsocHrs(startTime, eh);
     n = Math.max(0, eh-u);
   } else if (SHIFTS[shift]) {
     n = SHIFTS[shift].n; u = SHIFTS[shift].u;
   }
-  const rate       = type==='Public Holiday' ? R.pubHol : R.planned;
+  const rate       = type==='Public Holiday' ? R.pubHol : customType ? customType.rate : R.planned;
   const basePay    = (n+u)*rate;
   const unsocPay   = u*R.unsoc;
   const travPay    = (parseFloat(miles)||0)*2*R.mile;
@@ -967,13 +1111,15 @@ function render() {
   tbody.innerHTML = data.map((c,i) => {
     const st = status(c);
     const rc = st==='paid'?'rp':st==='acknowledged'?'ra':st==='sent'?'rs':'';
-    const shiftInfo = c.type==='Unplanned'
+    const _ct = userTypes.find(t => t.name === c.type);
+    const _unp = c.type==='Unplanned' || (_ct && _ct.behavior==='unplanned');
+    const shiftInfo = _unp
       ? `+${c.extraHrs||0}h @ ${c.startTime||'?'}`
       : (c.shift||'<span class="cdash">—</span>');
     let travCell;
     if (!(c.travPay > 0)) { travCell = '<span class="cdash">—</span>'; }
     else if (c.travClaimedDate) { travCell = `<span class="tbadge-claimed">✓ ${fd(c.travClaimedDate)}</span>`; }
-    else { travCell = '<span class="tbadge-pending">Unclaimed</span>'; }
+    else { travCell = `<button class="tbadge-pending" onclick="quickClaimTravel('${c.id}')" title="Click to mark travel as claimed today">Unclaimed</button>`; }
 
     const shiftTotal = (c.basePay||0) + (c.unsocPay||0);
     return `<tr class="${rc}">
@@ -1048,7 +1194,8 @@ function outsideClose(e) {
 
 function typeChanged() {
   const t = document.getElementById('fType').value;
-  const u = t==='Unplanned';
+  const customType = userTypes.find(ct => ct.name === t);
+  const u = t==='Unplanned' || (customType && customType.behavior==='unplanned');
   document.getElementById('gShift').style.display       = u?'none':'flex';
   document.getElementById('gShiftSpacer').style.display = u?'none':'flex';
   document.getElementById('gStart').style.display       = u?'flex':'none';
@@ -1169,13 +1316,37 @@ async function confirmDelete() {
   }
 }
 
+// ── TRAVEL QUICK-CLAIM ────────────────────────────────────────────────────
+async function quickClaimTravel(id) {
+  const yes = await showConfirm({
+    icon:'🚗', title:'Mark Travel Claimed',
+    msg:"Set today's date as the travel claim date? Travel pay will move to the 'Travel Claimed' stat.",
+    buttons:[{label:'Mark Claimed',style:'btn-green',value:true},{label:'Cancel',style:'btn-ghost',value:false}]
+  });
+  if (!yes) return;
+  const claim = claims.find(c=>c.id===id);
+  if (!claim) return;
+  const prev = claim.travClaimedDate;
+  claim.travClaimedDate = new Date().toISOString().slice(0,10);
+  try {
+    await upsertClaim(claim);
+    render();
+    setSyncStatus('ok', `Synced — ${claims.length} claim${claims.length!==1?'s':''}`);
+    toast('✓ Travel claimed','ok');
+  } catch {
+    claim.travClaimedDate = prev;
+    render();
+    toast('✗ Update failed — check connection','err');
+  }
+}
+
 // ── EXPORT CSV ─────────────────────────────────────────────────────────────
 function exportCSV() {
   if (!claims.length) { toast('No claims to export','err'); return; }
   const H = ['#','Date','Type','Shift','Normal h','Unsoc h','Base Pay','Unsoc Pay','Travel Pay','Travel Claimed Date','Shift Total','Status','Sent','Acknowledged','Paid','Notes'];
   const rows = claims.map((c,i)=>[
     i+1,c.date,c.type,
-    c.type==='Unplanned'?`+${c.extraHrs}h @ ${c.startTime}`:c.shift,
+    (()=>{const ct=userTypes.find(t=>t.name===c.type);return(c.type==='Unplanned'||(ct&&ct.behavior==='unplanned'))?`+${c.extraHrs}h @ ${c.startTime}`:c.shift;})(),
     (c.n||0).toFixed(2),(c.u||0).toFixed(2),
     (c.basePay||0).toFixed(2),(c.unsocPay||0).toFixed(2),(c.travPay||0).toFixed(2),
     c.travClaimedDate||'',
